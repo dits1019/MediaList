@@ -1,5 +1,6 @@
 package com.example.MediaList
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -19,9 +20,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topRatedMoviesAdapter: MoviesAdapter
     private lateinit var topRatedMoviesLayoutManager: LinearLayoutManager
 
+    private lateinit var upcomingMovies: RecyclerView
+    private lateinit var upcomingMoviesAdapter: MoviesAdapter
+    private lateinit var upcomingMoviesLayoutManager: LinearLayoutManager
+
 
     private var popularMoviesPage = 1
     private var topRatedMoviesPage = 1
+    private var upcomingMoviesPage = 1
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +41,7 @@ class MainActivity : AppCompatActivity() {
             false
         )
         popularMovies.layoutManager = popularMoviesLayoutManager
-        popularMoviesAdapter = MoviesAdapter(mutableListOf())
+        popularMoviesAdapter = MoviesAdapter(mutableListOf()) { movie -> showMovieDetails(movie) }
         popularMovies.adapter = popularMoviesAdapter
 
         topRatedMovies = findViewById(R.id.top_rated_movies)
@@ -44,12 +51,22 @@ class MainActivity : AppCompatActivity() {
             false
         )
         topRatedMovies.layoutManager = topRatedMoviesLayoutManager
-        topRatedMoviesAdapter = MoviesAdapter(mutableListOf())
+        topRatedMoviesAdapter = MoviesAdapter(mutableListOf()) { movie -> showMovieDetails(movie) }
         topRatedMovies.adapter = topRatedMoviesAdapter
 
+        upcomingMovies = findViewById(R.id.upcoming_movies)
+        upcomingMoviesLayoutManager = LinearLayoutManager(
+            this,
+            LinearLayoutManager.HORIZONTAL,
+            false
+        )
+        upcomingMovies.layoutManager = upcomingMoviesLayoutManager
+        upcomingMoviesAdapter = MoviesAdapter(mutableListOf()) { movie -> showMovieDetails(movie) }
+        upcomingMovies.adapter = upcomingMoviesAdapter
 
         getPopularMovies()
         getTopRatedMovies()
+        getUpcomingMovies()
 
     }
 
@@ -67,6 +84,14 @@ class MainActivity : AppCompatActivity() {
         MoviesRepository.getTopRatedMovies(
             topRatedMoviesPage,
             ::onTopRatedMoviesFetched,
+            ::onError
+        )
+    }
+
+    private fun getUpcomingMovies() {
+        MoviesRepository.getUpcomingMovies(
+            upcomingMoviesPage,
+            ::onUpcomingMoviesFetched,
             ::onError
         )
     }
@@ -104,6 +129,22 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun attachUpcomingMoviesOnScrollListener() {
+        upcomingMovies.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                val totalItemCount = upcomingMoviesLayoutManager.itemCount
+                val visibleItemCount = upcomingMoviesLayoutManager.childCount
+                val firstVisibleItem = upcomingMoviesLayoutManager.findFirstVisibleItemPosition()
+
+                if (firstVisibleItem + visibleItemCount >= totalItemCount / 2) {
+                    upcomingMovies.removeOnScrollListener(this)
+                    upcomingMoviesPage++
+                    getUpcomingMovies()
+                }
+            }
+        })
+    }
+
 
     private fun onPopularMoviesFetched(movies: List<Movie>) {
         popularMoviesAdapter.appendMovies(movies)
@@ -115,6 +156,21 @@ class MainActivity : AppCompatActivity() {
         attachTopRatedMoviesOnScrollListener()
     }
 
+    private fun onUpcomingMoviesFetched(movies: List<Movie>) {
+        upcomingMoviesAdapter.appendMovies(movies)
+        attachUpcomingMoviesOnScrollListener()
+    }
+
+    private fun showMovieDetails(movie: Movie) {
+        val intent = Intent(this, MovieDetailsActivity::class.java)
+        intent.putExtra(MOVIE_BACKDROP, movie.backdropPath)
+        intent.putExtra(MOVIE_POSTER, movie.posterPath)
+        intent.putExtra(MOVIE_TITLE, movie.title)
+        intent.putExtra(MOVIE_RATING, movie.rating)
+        intent.putExtra(MOVIE_RELEASE_DATE, movie.releaseDate)
+        intent.putExtra(MOVIE_OVERVIEW, movie.overview)
+        startActivity(intent)
+    }
 
     private fun onError() {
         Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()

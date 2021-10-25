@@ -10,7 +10,10 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.example.MediaList.data.Movie
 
-class MoviesAdapter(private var movies: MutableList<Movie>) : RecyclerView.Adapter<MoviesAdapter.MovieViewHolder>() {
+class MoviesAdapter(
+    private var movies: MutableList<Movie>,
+    private val onMovieClick : (movie: Movie) -> Unit
+) : RecyclerView.Adapter<MoviesAdapter.MovieViewHolder>() {
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -45,6 +48,8 @@ class MoviesAdapter(private var movies: MutableList<Movie>) : RecyclerView.Adapt
                 .into(poster)
 
             title.setText(movie.title)
+
+            itemView.setOnClickListener { onMovieClick.invoke(movie) }
         }
     }
 
